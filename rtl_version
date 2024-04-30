@@ -1,0 +1,15 @@
+#============================================
+# Displays the version of the RTL bitstream
+#============================================
+get_rtl_version()
+{
+    local major=$(pcireg -dec 0)
+    local minor=$(pcireg -dec 4)
+    local revis=$(pcireg -dec 8)
+    echo ${major}.${minor}.${revis}
+}
+#============================================
+get_rtl_version
+
+
+
