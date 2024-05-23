@@ -1,9 +1,11 @@
 #!/bin/bash
 # -----------------------------------------------------------------------
-#  This script causes the Linux to re-scan the PCI bus for the
-#  specified PCI device
+#  This script causes Linux to re-scan the PCI bus for the specified
+#  PCI device
 #
 #  This script must be run with root privileges!  Use sudo.
+#
+#  Author: Doug Wolf
 # ----------------------------------------------------------------------
 
 # Ensure that we're running with root privileges
@@ -12,38 +14,44 @@ if [ $(id -u) -ne 0 ]; then
     exit $?
 fi
 
-# This is the default device identification for our project
-default_device=10ee:903f
-
-# Fetch the device BDF from the command line
+# The device ID we want may be on the command line
 device=$1
 
-# If the user didn't specify a device BDF, try to find one for the
-# default device
-if [ -z "$device" ]; then
-    line=$(lspci -d $default_device)
+# If there was no device ID on the command line, look it up
+if [ "$device" == "" ]; then
+    line=$(lspci -n | grep "10ee:")
     if [ -z "$line" ]; then
-        echo "Error: no device specified or discovered"
+        echo "Error: no device found via lspci"
         exit 1
-    fi  
+    fi
     line=($line)
-    device=${line[0]}
-    echo "Found Xilinx PCI device with device ID $device"
+    device=${line[2]}
 fi
 
-# Check to see if we need to prepend domain "0000:" to the device name
-if [ ! -e "/sys/bus/pci/devices/$device" ]; then
-    device="0000:$device"
+# Look up the BDF that corresponds to this device id
+line=$(lspci -d $device)
+if [ -z "$line" ]; then
+    echo "Error: no device specified or discovered"
+    exit 1
+fi  
+line=($line)
+bdf=${line[0]}
+echo "Found Xilinx PCI device ${device} at BDF ${bdf}"
+
+
+# Check to see if we need to prepend domain "0000:" to the BDF
+if [ ! -e "/sys/bus/pci/devices/$bdf" ]; then
+    bdf="0000:$bdf"
 fi
 
-# If we still can't find that device, tell the user and quit
-if [ ! -e "/sys/bus/pci/devices/$device" ]; then
-    echo "Error: device $device not found"
+# If we still can't find that BDF, tell the user and quit
+if [ ! -e "/sys/bus/pci/devices/$bdf" ]; then
+    echo "Error: device $bdf not found"
     exit 1
 fi
 
 # Find out what bridge port is associated with this PCI device
-port=$(basename $(dirname $(readlink "/sys/bus/pci/devices/$device")))
+port=$(basename $(dirname $(readlink "/sys/bus/pci/devices/$bdf")))
 
 # If we don't have the ability to control that bridge, quit
 if [ ! -e "/sys/bus/pci/devices/$port" ]; then
@@ -52,8 +60,8 @@ if [ ! -e "/sys/bus/pci/devices/$port" ]; then
 fi
 
 # Remove our PCI device from the PCI device list
-echo "Removing $device..."
-echo 1 > "/sys/bus/pci/devices/$device/remove"
+echo "Removing $bdf..."
+echo 1 > "/sys/bus/pci/devices/${bdf}/remove"
 
 # Turn the bridge-control reset pin on for a moment, then off
 echo "Performing hot reset of port $port..."
@@ -71,6 +79,7 @@ else
     echo 1 > "/sys/bus/pci/devices/$port/rescan"
 fi
 
-echo "Enabling BusMaster mode on $device"
-setpci -s $device COMMAND=0106
+# Turn on BusMaster mode for this device
+echo "Enabling BusMaster mode on $bdf"
+setpci -s $bdf COMMAND=0106
 
