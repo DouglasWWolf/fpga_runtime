@@ -1,3 +1,13 @@
+#====================================================================
+# Vers   Date     Who  What
+#--------------------------------------------------------------------
+#   1  25-Jun-24  DWW  Initial creation
+#====================================================================
+
+
+#====================================================================
+# This displays the git-hash of the currently loaded Indy bitstream
+#====================================================================
 read_loaded_hash()
 {
     local a=$(pcireg -hex GLOBAL_FPGA_GIT_HASH0)
@@ -9,27 +19,43 @@ read_loaded_hash()
     local lower=$(echo $upper | tr [:upper:] [:lower:])
     echo \"$lower\"
 }
+#====================================================================
 
 
-
+#====================================================================
+# This displays the git-hash stored in the file "fpga_reg.h"
+#====================================================================
 read_local_hash()
 {
     local line=$(grep "FPGA_GIT_HASH " fpga_reg.h)
     line=($line)
     echo ${line[2]}
 }
+#====================================================================
 
+
+#
+# If the Indy RTL isn't loaded, complain and stop
+#
 if [ -z "$(lspci -d 10ee:7038)" ]; then
     echo "Indy RTL not loaded!" 1>&2
     exit 1
 fi
 
+
+#
+# If we can't find the "fpga_reg.h" file, complain and stop
+#
 if [ ! -f fpga_reg.h ]; then 
     echo "File fpga_reg.h not found!" 1>&2
     exit 1
 fi
 
 
+#
+# Display the git-hash from the currently loaded RTL and the
+# git-hash from the "fpga_reg.h" file
+#
 echo "Loaded hash:" $(read_loaded_hash)
 echo " Local hash:" $(read_local_hash)
 
