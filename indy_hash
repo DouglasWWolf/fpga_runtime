@@ -1,0 +1,35 @@
+read_loaded_hash()
+{
+    local a=$(pcireg -hex GLOBAL_FPGA_GIT_HASH0)
+    local b=$(pcireg -hex GLOBAL_FPGA_GIT_HASH1)
+    local c=$(pcireg -hex GLOBAL_FPGA_GIT_HASH2)
+    local d=$(pcireg -hex GLOBAL_FPGA_GIT_HASH3)
+    local e=$(pcireg -hex GLOBAL_FPGA_GIT_HASH4)
+    local upper=$(echo $e$d$c$b$a)
+    local lower=$(echo $upper | tr [:upper:] [:lower:])
+    echo \"$lower\"
+}
+
+
+
+read_local_hash()
+{
+    local line=$(grep "FPGA_GIT_HASH " fpga_reg.h)
+    line=($line)
+    echo ${line[2]}
+}
+
+if [ -z "$(lspci -d 10ee:7038)" ]; then
+    echo "Indy RTL not loaded!" 1>&2
+    exit 1
+fi
+
+if [ ! -f fpga_reg.h ]; then 
+    echo "File fpga_reg.h not found!" 1>&2
+    exit 1
+fi
+
+
+echo "Loaded hash:" $(read_loaded_hash)
+echo " Local hash:" $(read_local_hash)
+
