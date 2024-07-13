@@ -7,10 +7,11 @@ setuid_root()
 {
     sudo chown root $1
     sudo chgrp root $1
-    sudo chmod 4777 $1
+    sudo chmod 4755 $1
 }
 
 setuid_root pcireg
+setuid_root physram
 setuid_root load_bitstream
 
 
