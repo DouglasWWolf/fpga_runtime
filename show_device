@@ -5,12 +5,19 @@
 #  If you run this via 'sudo' you will see "capabilities" information that is
 #  otherwise protected
 # -----------------------------------------------------------------------------
-line=$(lspci -n | grep "10ee:")
+
+# If there is no device_id on the command line, the default is 10ee:903f
+test -z $1 && device_id=10ee:903f || device_id=$1
+
+# Convert the device_id to a BDF
+line=$(lspci -n | grep $device_id)
 if [ -z "$line" ]; then
    echo "Error: no device found via lspci"
    exit 1
 fi
 line=($line)
-device_id=${line[0]}
+bdf=${line[0]}
 
-lspci -vv -s $device_id
+# Show the settings for this device
+lspci -vv -s $bdf
+
