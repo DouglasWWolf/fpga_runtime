@@ -1,3 +1,9 @@
+dir=/opt/fpga_runtime
+if [ "$PWD" != "$dir" ]; then
+    echo "Must be in $dir to do this"
+    exit 1
+fi
+
 git add .
 git commit -m "No change history kept"
 git push origin main
