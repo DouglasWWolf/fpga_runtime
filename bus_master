@@ -18,7 +18,7 @@ if [ $(id -u) -ne 0 ]; then
 fi
 
 # Are we installing this script so it runs at boot?
-if [ $1 == "-install" ]; then
+if [ "$1" == "-install" ]; then
     service=bus_master.service
     outfile=/etc/systemd/system/$service
 
