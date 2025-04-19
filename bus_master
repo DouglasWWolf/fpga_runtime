@@ -17,9 +17,11 @@ if [ $(id -u) -ne 0 ]; then
     exit $?
 fi
 
+# If we are installing or uninstalling this, declare a service name
+service=bus_master.service
+
 # Are we installing this script so it runs at boot?
 if [ "$1" == "-install" ]; then
-    service=bus_master.service
     outfile=/etc/systemd/system/$service
 
     rm -rf $outfile
@@ -40,6 +42,17 @@ if [ "$1" == "-install" ]; then
     echo "$service installed"
     exit 0
 fi
+
+
+# Are we uninstalling this script?
+if [ "$1" == "-uninstall" ]; then
+    systemctl daemon-reload
+    systemctl disable $service
+    systemctl stop    $service
+    echo "$service uinstalled"
+    exit 0
+fi
+
 
 
 enable_bus_master()
