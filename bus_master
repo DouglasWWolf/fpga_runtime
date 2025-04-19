@@ -5,6 +5,9 @@
 #
 #  This script must be run with root privileges!  Use sudo.
 #
+#  Running "bus_master -install" will cause this script to be installed
+#  as a systemd service so that it runs at boot
+#
 #  Author: Doug Wolf
 # ----------------------------------------------------------------------
 
@@ -12,6 +15,30 @@
 if [ $(id -u) -ne 0 ]; then
     sudo $0 $1 $2 $3 $4  $5 $6
     exit $?
+fi
+
+# Are we installing this script so it runs at boot?
+if [ $1 == "-install" ]; then
+    service=bus_master.service
+    outfile=/etc/systemd/system/$service
+
+    rm -rf $outfile
+    echo "[Unit]"                                           >> $outfile
+    echo "Description=Enable bus-mastering on PCIe devices" >> $outfile
+    echo "After=network.target"                             >> $outfile
+    echo ""                                                 >> $outfile
+    echo "[Service]"                                        >> $outfile
+    echo "ExecStart=$0"                                     >> $outfile
+    echo ""                                                 >> $outfile
+    echo "[Install]"                                        >> $outfile
+    echo "WantedBy=default.target"                          >> $outfile
+
+    systemctl daemon-reload
+    systemctl enable $service
+    systemctl start  $service
+
+    echo "$service installed"
+    exit 0
 fi
 
 

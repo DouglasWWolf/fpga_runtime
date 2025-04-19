@@ -1,0 +1,10 @@
+
+[Unit]
+Description=Enable bus-mastering on PCIe devices
+After=network.target
+
+[Service]
+ExecStart=/opt/fpga_runtime/bus_master
+
+[Install]
+WantedBy=default.target
