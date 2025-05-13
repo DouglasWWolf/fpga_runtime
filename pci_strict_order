@@ -80,7 +80,7 @@ set_transaction_ordering()
     line=($line)
     bdf=${line[0]}
 
-    # Enable strict transaction ordering for this device
+    # Enable either strict or relaxed transaction ordering for this device
     if [ $relax -eq 0 ]; then
         echo "Enabling strict PCIe ordering on ${device} at BDF ${bdf}"
         setpci -d $device CAP_EXP+8.b=20
@@ -114,7 +114,7 @@ if [ ${#array[@]} -eq -0 ]; then
    exit 1
 fi
 
-# Now go enable strict transaction ordering on each device
+# Now go set the transaction ordering on each device
 for device in ${array[@]}; do
     set_transaction_ordering $device
 done
