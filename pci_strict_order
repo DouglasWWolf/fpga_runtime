@@ -1,0 +1,120 @@
+#!/bin/bash
+# -----------------------------------------------------------------------
+#  This script causes Linux to scan the PCI bus for the specified
+#  PCI device(s) and enable (or disable) strict transaction ordering
+#
+#  This script must be run with root privileges!  Use sudo.
+#
+#  Running "pci_strict_order -install" will cause this script to be 
+#  installed as a systemd service so that it runs at boot
+#
+#  Author: Doug Wolf
+# ----------------------------------------------------------------------
+
+# Ensure that we're running with root privileges
+if [ $(id -u) -ne 0 ]; then
+    sudo $0 $1 $2 $3 $4  $5 $6
+    exit $?
+fi
+
+
+# Find out whether the user is trying to set "relaxed"
+# transaction ordering
+if [ "$1" == "-relax" ]; then
+    relax=1
+    shift
+else
+    relax=0
+fi
+
+# If we are installing or uninstalling this, declare a service name
+service=pci_strict_order.service
+
+# Are we installing this script so it runs at boot?
+if [ "$1" == "-install" ]; then
+    outfile=/etc/systemd/system/$service
+
+    rm -rf $outfile
+    echo "[Unit]"                                             >> $outfile
+    echo "Description=Enable strict ordering on PCIe devices" >> $outfile
+    echo "After=network.target"                               >> $outfile
+    echo ""                                                   >> $outfile
+    echo "[Service]"                                          >> $outfile
+    echo "ExecStart=$0"                                       >> $outfile
+    echo ""                                                   >> $outfile
+    echo "[Install]"                                          >> $outfile
+    echo "WantedBy=default.target"                            >> $outfile
+
+    systemctl daemon-reload
+    systemctl enable $service
+    systemctl start  $service
+
+    echo "$service installed"
+    exit 0
+fi
+
+
+# Are we uninstalling this script?
+if [ "$1" == "-uninstall" ]; then
+    systemctl daemon-reload
+    systemctl disable $service
+    systemctl stop    $service
+    echo "$service uinstalled"
+    exit 0
+fi
+
+
+
+set_transaction_ordering()
+{
+    local device=$1
+
+    # Look up the BDF that corresponds to this device id
+    line=$(lspci -d $device)
+    if [ -z "$line" ]; then
+        echo "=========================================="
+        echo "  bus_master: device $device not found"
+        echo "=========================================="        
+        return
+    fi  
+    line=($line)
+    bdf=${line[0]}
+
+    # Enable strict transaction ordering for this device
+    if [ $relax -eq 0 ]; then
+        echo "Enabling strict PCIe ordering on ${device} at BDF ${bdf}"
+        setpci -d $device CAP_EXP+8.b=20
+    else
+        echo "Enabling relaxed PCIe ordering on ${device} at BDF ${bdf}"
+        setpci -d $device CAP_EXP+8.b=30
+    fi
+}
+
+# Start with an empty array of device IDs
+array=()
+
+# If there are no devices on the command line, use
+# lspci to go find some 
+if [ $# -ne 0 ]; then
+    array=($1 $2 $3 $4 $5 $6)
+else
+    filename="/tmp/${RANDOM}.tmp"
+    lspci -n | grep "10ee:" > $filename
+    while read line; do
+       words=($line)
+       device=${words[2]}
+       array+=($device)
+    done  < $filename
+    rm -rf $filename
+fi
+
+# If we didn't find any devices, complain
+if [ ${#array[@]} -eq -0 ]; then
+   echo "pci_strict_order: no devices listed on command line or found via lspci"
+   exit 1
+fi
+
+# Now go enable strict transaction ordering on each device
+for device in ${array[@]}; do
+    set_transaction_ordering $device
+done
