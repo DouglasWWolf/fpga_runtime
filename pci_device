@@ -1,0 +1,190 @@
+#!/bin/bash
+# -----------------------------------------------------------------------
+#  This script causes Linux to scan the PCI bus for the specified
+#  PCI device(s) and enable/disable:
+#      BusMaster
+#      RlxdOrd
+#
+#  This script must be run with root privileges!  Use sudo.
+#
+#  Running "pci_device -install <options>" will cause this script to be 
+#  installed as a systemd service so that it runs at boot
+#
+#  Author: Doug Wolf
+# ----------------------------------------------------------------------
+
+# Ensure that we're running with root privileges
+if [ $(id -u) -ne 0 ]; then
+    sudo $0 $1 $2 $3 $4 $5 $6
+    exit $?
+fi
+
+# Fetch the name of this script
+exe=$(realpath $0)
+base_exe=$(basename $exe)
+
+# By default, our mode of operation is changing PCIe device settings
+mode=modify
+
+# Determine which runtime options are present on the command line
+if [ "$1" == "-install" ]; then
+    mode=$1
+    shift
+elif [ "$1" == "-uninstall" ]; then
+    mode=$1
+    shift
+fi
+
+# If there are no options on the command line, then just display the usage
+if [ -z $1 ]; then
+    echo "$base_exe [-install] VENDOR_ID[:DEVICE_ID] [BusMaster+] [BusMaster-] [RlxdOrd+] [RlxdOrd-]"
+    exit
+fi
+
+# We haven't parsed a PCIe deviceID yet
+have_id=0
+
+# Fetch the device ID from the command line
+device_id=$1
+shift
+
+# Do we have a short deviceID?
+echo $device_id | grep -Eq "^[0-9a-fA-F]{4}$"
+if [ $? -eq 0 ]; then
+    have_id=1
+    short_id=1
+fi
+
+# Do we have a full deviceID?
+echo $device_id | grep -Eq "^[0-9a-fA-F]{4}:[0-9a-fA-F]{4}$"
+if [ $? -eq 0 ]; then
+    have_id=1
+    short_id=0
+fi
+
+# If we have a malformed deviceID complain
+if [ $have_id -eq 0 ]; then
+    echo "$base_exe: malformed device ID [$device_id] on command line" 1>&2
+    exit 1
+fi
+
+# If we are installing or uninstalling this, declare a service name
+service=pci_device_${device_id}.service
+
+# Are we installing this script so it runs at boot?
+if [ $mode == "-install" ]; then
+    outfile=/etc/systemd/system/$service
+
+    rm -rf $outfile
+    echo "[Unit]"                                            >> $outfile
+    echo "Description=Configure properties of a PCIe device" >> $outfile
+    echo "After=network.target"                              >> $outfile
+    echo ""                                                  >> $outfile
+    echo "[Service]"                                         >> $outfile
+    echo "ExecStart=$exe $device_id $1 $2 $3 $4 $5 $6"       >> $outfile
+    echo ""                                                  >> $outfile
+    echo "[Install]"                                         >> $outfile
+    echo "WantedBy=default.target"                           >> $outfile
+
+    systemctl daemon-reload
+    systemctl enable $service
+    systemctl start  $service
+
+    echo "$service installed"
+    exit 0
+fi
+
+
+# Are we uninstalling this script?
+if [ $mode == "-uninstall" ]; then
+    systemctl daemon-reload
+    systemctl disable $service
+    systemctl stop    $service
+    echo "$service uninstalled"
+    exit 0
+fi
+
+# Fetch our optional settings into an array
+setting=()
+while [ ! -z $1 ]; do
+   setting+=($1)
+   shift
+done
+
+
+set_option()
+{
+    local device=$1
+    shift
+
+    # Look up the BDF that corresponds to this device id
+    line=$(lspci -d $device)
+    if [ -z "$line" ]; then
+        echo "=========================================="
+        echo "  $base_exe: device $device not found"
+        echo "=========================================="        
+        return
+    fi  
+    line=($line)
+    bdf=${line[0]}
+
+    # If there are no options on the command line, just display the device
+    if [ -z $1 ]; then
+        lspci -vv -d $device
+    fi
+
+    # Loop through each option and perform the specified task
+    while [ ! -z $1 ]; do
+        option=$1
+        shift
+
+        if [ $option == "BusMaster+" ]; then
+            echo "Setting $option on ${device} at BDF ${bdf}"
+            setpci -s $bdf COMMAND=0106
+
+        elif [ $option == "BusMaster-" ]; then
+            echo "Setting $option on ${device} at BDF ${bdf}"
+            setpci -s $bdf COMMAND=0102
+
+        elif [ $option == "RlxdOrd+" ]; then
+            echo "Setting $option on ${device} at BDF ${bdf}"
+            setpci -d $device CAP_EXP+8.b=30
+
+        elif [ $option == "RlxdOrd-" ]; then
+            echo "Setting $option on ${device} at BDF ${bdf}"
+            setpci -d $device CAP_EXP+8.b=20
+
+        else
+            echo "$base_exe: unknown option [$option]" 1>&2
+        fi
+    done
+
+}
+
+# Start with an empty array of device IDs
+array=()
+
+# Build our array of device IDs
+if [ $short_id -eq 0 ]; then
+    array=($device_id)
+else
+    filename="/tmp/${RANDOM}.tmp"
+    lspci -n | grep "${device_id}:" > $filename
+    while read line; do
+       words=($line)
+       device=${words[2]}
+       array+=($device)
+    done  < $filename
+    rm -rf $filename
+fi
+
+# If we didn't find any devices, complain
+if [ ${#array[@]} -eq -0 ]; then
+   echo "$base_exe: no devices listed on command line or found via lspci" 1>&2
+   exit 1
+fi
+
+# Now go set the specified options on each device
+for device in ${array[@]}; do
+    set_option $device ${setting[@]}
+done
