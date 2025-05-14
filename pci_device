@@ -15,13 +15,26 @@
 
 # Ensure that we're running with root privileges
 if [ $(id -u) -ne 0 ]; then
-    sudo $0 $1 $2 $3 $4 $5 $6
+    sudo $0 $1 $2 $3 $4 $5 $6 $7 $8 $9
     exit $?
 fi
 
 # Fetch the name of this script
 exe=$(realpath $0)
 base_exe=$(basename $exe)
+
+# Ensure that setpci exists
+if [ -z $(which setpci) ]; then
+    echo "$base_exe: setpci not found!" 1>&2
+    exit 1
+fi
+
+
+# Ensure that lspci exists
+if [ -z $(which lspci) ]; then
+    echo "$base_exe: lspci not found!" 1>&2
+    exit 1
+fi
 
 # By default, our mode of operation is changing PCIe device settings
 mode=modify
