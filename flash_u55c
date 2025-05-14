@@ -126,7 +126,7 @@ bit_to_mcs $filename $mcs
 if [ -f $mcs ]; then
     echo " Done!"
 else
-    echo "FAILED!"
+    echo " FAILED!"
     exit 1
 fi
 
