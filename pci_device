@@ -139,19 +139,19 @@ set_option()
         shift
 
         if [ $option == "BusMaster+" ]; then
-            echo "Setting $option on ${device} at BDF ${bdf}"
-            setpci -s $bdf COMMAND=0106
+            echo "Applying $option to device ${device} at BDF ${bdf}"
+            setpci -d $device COMMAND=0106
 
         elif [ $option == "BusMaster-" ]; then
-            echo "Setting $option on ${device} at BDF ${bdf}"
-            setpci -s $bdf COMMAND=0102
+            echo "Applying $option to device ${device} at BDF ${bdf}"
+            setpci -d $device COMMAND=0102
 
         elif [ $option == "RlxdOrd+" ]; then
-            echo "Setting $option on ${device} at BDF ${bdf}"
+            echo "Applying $option to device ${device} at BDF ${bdf}"
             setpci -d $device CAP_EXP+8.b=30
 
         elif [ $option == "RlxdOrd-" ]; then
-            echo "Setting $option on ${device} at BDF ${bdf}"
+            echo "Applying $option to device ${device} at BDF ${bdf}"
             setpci -d $device CAP_EXP+8.b=20
 
         else
