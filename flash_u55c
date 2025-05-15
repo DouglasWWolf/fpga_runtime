@@ -60,15 +60,19 @@ burn_flash()
     # This is a hack to stop the shell from transating these during the cat<<EOT
     device='$device'
     filename='$filename'
+    fpga_type='$fpga_type'
 
     # Create the rest of the script that will burn our .mcs into U55C flash memory
     cat<<EOT >>$script
+
+    set fpga_type xcu280_u55c_0
+
     open_hw_manager
     connect_hw_server -allow_non_jtag
-
     open_hw_target
-    current_hw_device  [get_hw_devices xcu280_u55c_0]
-    set device [lindex [get_hw_devices xcu280_u55c_0] 0]
+
+    current_hw_device  [get_hw_devices $fpga_type]
+    set device [lindex [get_hw_devices $fpga_type] 0]
 
     refresh_hw_device -update_hw_probes false $device
     create_hw_cfgmem -hw_device $device [lindex [get_cfgmem_parts {mt25qu01g-spi-x1_x2_x4}] 0]
@@ -96,6 +100,9 @@ burn_flash()
     refresh_hw_device              $device 
     program_hw_cfgmem -hw_cfgmem [ get_property PROGRAM.HW_CFGMEM $device ]
     endgroup
+
+    boot_hw_device $device
+
     exit
 EOT
 
@@ -121,7 +128,7 @@ fi
 mcs=/tmp/design.mcs
 
 # Create the .mcs file from the .bit file
-echo -n "Creating .mcs from $filename..."
+echo -n "Creating $mcs from $filename..."
 bit_to_mcs $filename $mcs
 if [ -f $mcs ]; then
     echo " Done!"
@@ -131,7 +138,7 @@ else
 fi
 
 # Now burn our MCS file to the U55C flash memory
-echo -n "Burning .mcs to U55C flash..."
+echo -n "Burning $mcs to U55C flash..."
 burn_flash $mcs
 echo " Done!"
 
