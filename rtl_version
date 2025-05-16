@@ -31,8 +31,8 @@ get_rtl_type()
 }
 #============================================
 
-# If the user wants to see the app-name, display it
-test "$1" == "-app" && echo -n "$(get_rtl_type) "
+# If the user wants "verbose", display the rtl-app name
+test "$1" == "-v" && echo -n "$(get_rtl_type) "
 
 # Display the RTL version number
 get_rtl_version
