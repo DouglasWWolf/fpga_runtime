@@ -9,7 +9,29 @@ get_rtl_version()
     echo ${major}.${minor}.${revis}
 }
 #============================================
-get_rtl_version
 
+
+#============================================
+# Displays the RTL application name
+#============================================
+get_rtl_type()
+{
+    local type=$(pcireg -dec 20)    
+
+    case $type in 
+          12266) echo "nsdp_checker";;
+          31725) echo "rdmx_dual_nic";;
+         741776) echo "cabletest";;
+         642024) echo "loopback";;
+        6142024) echo "abm_gen";;
+         121475) echo "packet_capture";;
+         912018) echo "bc_emu";;
+              *) echo "rtl_app_$type";;
+    esac
+}
+#============================================
+
+test "$1" == "-app" && echo -n "$(get_rtl_type) "
+get_rtl_version
 
 
