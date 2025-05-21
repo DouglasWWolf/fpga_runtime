@@ -26,6 +26,7 @@ get_rtl_type()
         6142024) echo "abm_gen";;
          121475) echo "packet_capture";;
          912018) echo "bc_emu";;
+          52125) echo "rx_packet_ctr";; 
               *) echo "rtl_app_$type";;
     esac
 }
