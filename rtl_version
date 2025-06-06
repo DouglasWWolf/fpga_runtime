@@ -1,7 +1,7 @@
 #============================================
 # Displays the version of the RTL bitstream
 #============================================
-get_rtl_version()
+get_version()
 {
     local major=$(pcireg -dec 0)
     local minor=$(pcireg -dec 4)
@@ -14,7 +14,7 @@ get_rtl_version()
 #============================================
 # Displays the RTL application name
 #============================================
-get_rtl_type()
+get_type()
 {
     local type=$(pcireg -dec 20)    
 
@@ -32,10 +32,100 @@ get_rtl_type()
 }
 #============================================
 
-# If the user wants "verbose", display the rtl-app name
-test "$1" == "-v" && echo -n "$(get_rtl_type) "
+#============================================
+# Fetches and displays the time
+#============================================
+get_time()
+{
+    # Fetch the time
+    tst=$(pcireg -dec 0x1C);
 
-# Display the RTL version number
-get_rtl_version
+    # Extract the time components
+    hour=$(( (tst >> 16) & 0xFF))
+     min=$(( (tst >>  8) & 0xFF))
+     sec=$(( (tst >>  0) & 0xFF))
 
+    # Display the formatted time and date
+    printf "%02d:%02d:%02d\n" $hour $min $sec
+}
+#============================================
+
+#============================================
+# Fetches and displays the date
+#============================================
+get_date()
+{
+    # Fetch the date
+    tsd=$(pcireg -dec 0x10);
+
+    # Extract the date components
+    month=$(( (tsd >>24) & 0x00FF))
+      day=$(( (tsd >>16) & 0x00FF))
+     year=$(( (tsd >> 0) & 0xFFFF))
+
+    # Display the formatted date
+    printf "%02d/%02d/%04d" $month $day $year
+}
+#============================================
+
+
+#============================================
+# Fetches and displays the git-hash
+#============================================
+get_hash()
+{
+    h0=$(pcireg -hex 0x40)
+    h1=$(pcireg -hex 0x44)
+    h2=$(pcireg -hex 0x48)
+    h3=$(pcireg -hex 0x4C)
+    h4=$(pcireg -hex 0x50)
+
+    echo $h0$h1$h2$h3$h4 | tr '[:upper:]' '[:lower:]'
+}
+#============================================
+
+# No command options? Display everything
+if [ -z $1 ]; then
+    echo -n "$(get_type) "
+    echo -n "$(get_version) "
+    echo -n "$(get_date) "
+    echo -n "$(get_time) "
+    echo    "$(get_hash)"
+    exit
+fi
+
+first=1
+while [ ! -z $1 ]; do
+    if [ $1 == "-i" ]; then
+        test first -eq 0 && echo -n " "
+        echo -n $(get_type)
+        first=0;
+    fi
+
+    if [ $1 == "-t" ]; then
+        test first -eq 0 && echo -n " "
+        echo -n $(get_time)
+        first=0;
+    fi
+
+    if [ $1 == "-d" ]; then
+        test first -eq 0 && echo -n " "
+        echo -n $(get_date)
+        first=0;
+    fi
+
+    if [ $1 == "-v" ]; then
+        test first -eq 0 && echo -n " "
+        echo -n $(get_version)
+        first=0;
+    fi
+
+    if [ $1 == "-h" ]; then
+        test first -eq 0 && echo -n " "
+        echo -n $(get_hash)
+        first=0;
+    fi
+
+    shift
+done
 
