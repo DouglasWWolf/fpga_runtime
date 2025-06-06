@@ -97,35 +97,39 @@ fi
 first=1
 while [ ! -z $1 ]; do
     if [ $1 == "-i" ]; then
-        test first -eq 0 && echo -n " "
+        test $first -eq 0 && echo -n " "
         echo -n $(get_type)
-        first=0;
+        first=0
     fi
 
     if [ $1 == "-t" ]; then
-        test first -eq 0 && echo -n " "
+        test $first -eq 0 && echo -n " "
         echo -n $(get_time)
-        first=0;
+        first=0
     fi
 
     if [ $1 == "-d" ]; then
-        test first -eq 0 && echo -n " "
+        test $first -eq 0 && echo -n " "
         echo -n $(get_date)
-        first=0;
+        first=0
     fi
 
     if [ $1 == "-v" ]; then
-        test first -eq 0 && echo -n " "
+        test $first -eq 0 && echo -n " "
         echo -n $(get_version)
-        first=0;
+        first=0
     fi
 
     if [ $1 == "-h" ]; then
-        test first -eq 0 && echo -n " "
+        test $first -eq 0 && echo -n " "
         echo -n $(get_hash)
-        first=0;
+        first=0
     fi
 
     shift
 done
+
+# Ensure there's a linefeed on the end
+echo
+
 
