@@ -10,6 +10,7 @@ setuid_root()
     sudo chmod 4755 $1
 }
 
+setuid_root axireg
 setuid_root pcireg
 setuid_root physram
 setuid_root load_bitstream
