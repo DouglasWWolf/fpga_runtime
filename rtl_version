@@ -1,3 +1,6 @@
+# All of the designs we support use this PCI vendorID:deviceID
+pcireg_device=10ee:903f
+
 #====================================================
 # Displays the version of the RTL bitstream
 #====================================================
