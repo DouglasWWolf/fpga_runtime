@@ -10,26 +10,27 @@
 
 # Ensure that we're running with root privileges
 if [ $(id -u) -ne 0 ]; then
-    sudo $0 $1 $2 $3 $4  $5 $6
+    sudo $0 $1 $2 $3 $4 $5 $6
     exit $?
 fi
 
 
 reset_pci()
 {
-    local device=$1
-    # Look up the BDF that corresponds to this device id
-    line=$(lspci -d $device)
+    # $1 should be the BDF of the device we want to reset the bus for
+    local bdf=$1
+
+    # Look up the vendorID:deviceID that corresponds to this BDF
+    line=$(lspci -n -s $bdf)
     if [ -z "$line" ]; then
         echo "====================================="
-        echo "  hot_reset: device $device not found"
+        echo "  hot_reset: BDF $bdf not found"
         echo "====================================="        
         return
     fi  
     line=($line)
-    bdf=${line[0]}
+    local device=${line[2]}
     echo "Found Xilinx PCI device ${device} at BDF ${bdf}"
-
 
     # Check to see if we need to prepend domain "0000:" to the BDF
     if [ ! -e "/sys/bus/pci/devices/$bdf" ]; then
@@ -76,23 +77,36 @@ reset_pci()
     setpci -s $bdf COMMAND=0106
 }
 
+
+extract_token()
+{
+    line="$2 $3 $4 $5"    
+    words=($line)
+    echo ${words[$1]}
+}
+
+
 # Start with an empty array of device IDs
 array=()
 
 # If there are no devices on the command line, use
 # lspci to go find some 
+filename="/tmp/${RANDOM}.tmp"
 if [ $# -ne 0 ]; then
-    array=($1 $2 $3 $4 $5 $6)
+    for device in $1 $2 $3 $4 $5 $6; do
+        line=$(lspci -d $device)
+        bdf=$(extract_token 0 $line)
+        array+=($bdf)
+    done
 else
-    filename="/tmp/${RANDOM}.tmp"
+
     lspci -n | grep "10ee:" > $filename
     while read line; do
-       words=($line)
-       device=${words[2]}
-       array+=($device)
+       bdf=$(extract_token 0 $line)
+       array+=($bdf)
     done  < $filename
-    rm -rf $filename
 fi
+rm -rf $filename
 
 # If we didn't find any devices, complain
 if [ ${#array[@]} -eq -0 ]; then
@@ -101,6 +115,6 @@ if [ ${#array[@]} -eq -0 ]; then
 fi
 
 # Now go perform a hot-reset on each device
-for device in ${array[@]}; do
-    reset_pci $device
+for bdf in ${array[@]}; do
+    reset_pci $bdf
 done
