@@ -30,7 +30,7 @@ get_type()
          121475) echo "packet_capture";;
          912018) echo "bc_emu";;
           52125) echo "rx_packet_ctr";; 
-          12126) echo "packet_forward";;
+          12126) echo "packet_relay";;
               *) echo "rtl_app_$type";;
     esac
 }
