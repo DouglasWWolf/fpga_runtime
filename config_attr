@@ -2,6 +2,7 @@
 # This short script will make the listed executables run  
 # as the root user
 #
+test $PWD == "/opt/fpga_runtime" || exit 1
 
 setuid_root()
 {
