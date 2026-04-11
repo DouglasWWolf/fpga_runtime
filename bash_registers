@@ -1,0 +1,43 @@
+#
+# This script reads in an "fpga_reg.h" file and create variables
+# with the register definitions
+#
+# Author: D. Wolf
+#
+file=
+show=0;
+
+while [ ! -z $1 ]; do
+    if [ "$1" == "-show" ]; then
+        shift
+        show=1
+        continue
+    fi
+    if [ -z $file ]; then
+        file=$1
+        shift
+        continue
+    fi
+    echo "Invalid parameter:" $1 1>&2
+    exit 1
+done
+
+
+if [ -z $file ]; then
+    echo "filename requred" 1>&2
+    exit 1
+fi
+
+if [ ! -f $file ]; then
+    echo "not found: $file" 1>&2
+    exit 1
+fi
+
+while IFS=' ' read -r def name addr; do
+    test -z $addr && continue
+    addr=$((addr))
+    cmd=$(printf "%s=0x%X" $name $addr)
+    eval $cmd
+    test $show -eq 1 && echo $cmd
+done <<< $(grep "#define" $file | sed 's/ULL$//')
+
